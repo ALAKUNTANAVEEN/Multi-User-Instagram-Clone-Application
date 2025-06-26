@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4">Your Timeline</h2>
+
+<div id="post-list" class="mb-4"></div>
+<div id="timeline-status" class="text-muted"></div>
+
+<script>
+window.addEventListener("load", () => {
+  if (typeof firebase === "undefined") {
+    alert("Firebase not loaded. Please refresh.");
+    return;
+  }
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    user.getIdToken().then(token => {
+      localStorage.setItem("idToken", token);
+
+      fetch("/posts/timeline", {
+        headers: { "id-token": token }
+      })
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to fetch timeline.");
+        return res.json();
+      })
+      .then(posts => {
+        const container = document.getElementById("post-list");
+        const status = document.getElementById("timeline-status");
+
+        if (!posts.length) {
+          status.textContent = "No posts yet. Try uploading one or follow users.";
+          return;
+        }
+
+        posts.forEach(post => {
+          const div = document.createElement("div");
+          div.className = "card mb-4 shadow-sm border-0";
+          div.style.borderRadius = "10px";
+          div.style.overflow = "hidden";
+
+          div.innerHTML = `
+            <div class="row g-0">
+              <div class="col-md-5">
+                <img src="${post.ImageURL}" class="img-fluid rounded-start" alt="Post image">
+              </div>
+              <div class="col-md-7">
+                <div class="card-body">
+                  <h5 class="card-title">${post.Username}</h5>
+                  <p class="card-text">${post.Caption}</p>
+                  <small class="text-muted">${new Date(post.Date).toLocaleString()}</small>
+                  <div class="mt-3">
+                    <strong>Comments:</strong>
+                    <div class="comments-section mt-2"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          `;
+
+          const comments = post.Comments || [];
+          const shown = comments.slice(-5).reverse();
+          const all = comments.slice(0, -5).reverse();
+
+          const shownHtml = shown.map(c => `
+            <div class="comment">
+              <strong>${c.username}</strong>: ${c.comment}
+            </div>`).join("");
+
+          const extraHtml = all.length > 0 ? `
+            <div class="d-none more-comments">
+              ${all.map(c => `<div class="comment"><strong>${c.username}</strong>: ${c.comment}</div>`).join("")}
+            </div>
+            <button class="btn btn-sm btn-link show-more-btn">Show more</button>` : "";
+
+          const commentsContainer = div.querySelector(".comments-section");
+          commentsContainer.innerHTML = shownHtml + extraHtml;
+
+          const showMoreBtn = div.querySelector(".show-more-btn");
+          if (showMoreBtn) {
+            showMoreBtn.addEventListener("click", () => {
+              div.querySelector(".more-comments").classList.remove("d-none");
+              showMoreBtn.remove();
+            });
+          }
+
+          container.appendChild(div);
+        });
+      })
+      .catch(err => {
+        console.error("🚨 Error fetching timeline:", err);
+        document.getElementById("timeline-status").innerHTML = `<p class="text-danger">❌ Failed to load timeline. Try logging in again.</p>`;
+      });
+    });
+  });
+});
+</script>
+{% endblock %}

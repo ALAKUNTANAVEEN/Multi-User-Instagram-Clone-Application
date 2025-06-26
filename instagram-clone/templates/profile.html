@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="profile-info" class="mb-4"></div>
+<div id="post-list"></div>
+
+<!-- Modal for post detail -->
+<div class="modal fade" id="postModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-body" id="modal-body-content"></div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const uid = new URLSearchParams(window.location.search).get("uid");
+let currentUserUID = "";
+
+window.addEventListener("load", () => {
+  if (typeof firebase === "undefined") {
+    alert("Firebase failed to load. Refresh the page.");
+    return;
+  }
+
+  firebase.auth().onAuthStateChanged(user => {
+    if (!user) {
+      window.location.href = "/login";
+      return;
+    }
+
+    user.getIdToken().then(token => {
+      localStorage.setItem("idToken", token);
+
+      fetch("/auth/login", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "id-token": token
+        },
+        body: JSON.stringify({})
+      })
+      .then(res => res.json())
+      .then(userData => {
+        currentUserUID = userData.uid;
+
+        return fetch(`/users/profile/${uid}`);
+      })
+      .then(res => res.json())
+      .then(profile => {
+        const container = document.getElementById("profile-info");
+        const isCurrentUser = uid === currentUserUID;
+
+        container.innerHTML = `
+          <h2>${profile.Username}</h2>
+          <p>
+            Followers: <a href="/follow-list?uid=${uid}&type=followers">${profile.Followers.length}</a> |
+            Following: <a href="/follow-list?uid=${uid}&type=following">${profile.Following.length}</a>
+          </p>
+          ${isCurrentUser ? "" : `
+          <button id="follow-btn" class="btn ${profile.Followers.includes(currentUserUID) ? 'btn-danger' : 'btn-success'}">
+            ${profile.Followers.includes(currentUserUID) ? 'Unfollow' : 'Follow'}
+          </button>
+          `}
+          <hr>
+          <h4>User Posts</h4>
+        `;
+
+        if (!isCurrentUser) {
+          document.getElementById("follow-btn").addEventListener("click", () => {
+            const action = profile.Followers.includes(currentUserUID) ? "unfollow" : "follow";
+            fetch(`/users/${action}/${uid}`, {
+              method: "POST",
+              headers: { "id_token": token }
+            }).then(() => location.reload());
+          });
+        }
+
+        fetch(`/posts/user/${profile.Username}`)
+          .then(res => res.json())
+          .then(posts => {
+            const postContainer = document.getElementById("post-list");
+            posts.forEach(post => {
+              post.id = post.id || "";
+              const div = document.createElement("div");
+              div.className = "card mb-4 shadow-sm border-0";
+              div.style.borderRadius = "10px";
+              div.style.overflow = "hidden";
+              div.style.cursor = "pointer";
+              div.addEventListener("click", () => openPostDetail(post));
+
+              div.innerHTML = `
+                <div class="row g-0">
+                  <div class="col-md-5">
+                    <img src="${post.ImageURL}" class="img-fluid rounded-start" alt="Post image">
+                  </div>
+                  <div class="col-md-7">
+                    <div class="card-body">
+                      <p class="card-text">${post.Caption}</p>
+                      <small class="text-muted">${new Date(post.Date).toLocaleString()}</small><br>
+                      <small class="text-muted">Likes: ${post.Likes ? post.Likes.length : 0}</small>
+                      <div class="mt-3">
+                        <strong>Comments:</strong>
+                        <div class="comments-section mt-2"></div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              `;
+
+              const comments = post.Comments || [];
+              const shown = comments.slice(-5).reverse();
+              const all = comments.slice(0, -5).reverse();
+
+              const shownHtml = shown.map(c => `
+                <div class="comment">
+                  <strong>${c.username}</strong>: ${c.comment}
+                </div>`).join("");
+
+              const extraHtml = all.length > 0 ? `
+                <div class="d-none more-comments">
+                  ${all.map(c => `<div class="comment"><strong>${c.username}</strong>: ${c.comment}</div>`).join("")}
+                </div>
+                <button class="btn btn-sm btn-link show-more-btn">Show more</button>` : "";
+
+              const commentsContainer = div.querySelector(".comments-section");
+              commentsContainer.innerHTML = shownHtml + extraHtml;
+
+              const showMoreBtn = div.querySelector(".show-more-btn");
+              if (showMoreBtn) {
+                showMoreBtn.addEventListener("click", () => {
+                  div.querySelector(".more-comments").classList.remove("d-none");
+                  showMoreBtn.remove();
+                });
+              }
+
+              postContainer.appendChild(div);
+            });
+          });
+      });
+    });
+  });
+});
+
+function openPostDetail(post) {
+  const modalBody = document.getElementById("modal-body-content");
+  const comments = (post.Comments || []).reverse().map(c => `
+    <p><strong>${c.username}</strong>: ${c.comment}</p>
+  `).join("");
+
+  modalBody.innerHTML = `
+    <img src="${post.ImageURL}" class="img-fluid mb-3" alt="Post image">
+    <h5>${post.Caption}</h5>
+    <p><strong>Posted:</strong> ${new Date(post.Date).toLocaleString()}</p>
+    <p><strong>Likes:</strong> <span id="like-count">${post.Likes ? post.Likes.length : 0}</span></p>
+    <button class="btn btn-outline-primary mb-3" id="like-btn">❤️ Like</button>
+    <hr>
+    <h6>Comments</h6>
+    ${comments || "<p>No comments yet.</p>"}
+  `;
+
+  document.getElementById("like-btn").addEventListener("click", () => {
+    const token = localStorage.getItem("idToken");
+    fetch(`/posts/like/${post.id}`, {
+      method: "POST",
+      headers: { "id_token": token }
+    }).then(() => location.reload());
+  });
+
+  const modal = new bootstrap.Modal(document.getElementById("postModal"));
+  modal.show();
+}
+</script>
+{% endblock %}

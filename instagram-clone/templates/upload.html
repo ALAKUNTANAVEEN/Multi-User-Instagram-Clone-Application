@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2 class="mb-4 text-primary fw-bold">📤 Create a New Post</h2>
+
+<div class="card shadow-sm p-4 mb-4 bg-light border-0 rounded">
+    <form id="upload-form" enctype="multipart/form-data">
+        <div class="mb-3">
+            <label for="file" class="form-label fw-semibold">Image (PNG or JPG)</label>
+            <input class="form-control" type="file" id="file" name="file" accept="image/png, image/jpeg" required>
+        </div>
+        <div class="mb-3">
+            <label for="caption" class="form-label fw-semibold">Caption</label>
+            <textarea class="form-control" id="caption" name="caption" rows="3" placeholder="Say something about your post..." required></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary fw-semibold w-100">📤 Post</button>
+    </form>
+    <div id="upload-status" class="mt-3 fw-bold text-center"></div>
+</div>
+
+<script>
+document.getElementById("upload-form").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const token = localStorage.getItem("idToken");
+
+    if (!token) {
+        document.getElementById("upload-status").innerText = "❌ Error: Not logged in. Please log in again.";
+        return;
+    }
+
+    const fileInput = document.getElementById("file");
+    const captionInput = document.getElementById("caption");
+    const formData = new FormData();
+    formData.append("file", fileInput.files[0]);
+    formData.append("caption", captionInput.value);
+
+    try {
+        const res = await fetch("/posts/create", {
+            method: "POST",
+            headers: { "id-token": token },
+            body: formData
+        });
+
+        const result = await res.json();
+
+        const statusEl = document.getElementById("upload-status");
+        if (res.ok) {
+            statusEl.innerText = "✅ Post uploaded successfully!";
+            statusEl.className = "mt-3 fw-bold text-success text-center";
+        } else {
+            console.error("Upload error:", result);
+            statusEl.innerText = "❌ Error: " + JSON.stringify(result.detail || "Unknown error");
+            statusEl.className = "mt-3 fw-bold text-danger text-center";
+        }
+    } catch (err) {
+        document.getElementById("upload-status").innerText = "❌ Upload failed: " + err.message;
+        document.getElementById("upload-status").className = "mt-3 fw-bold text-danger text-center";
+    }
+});
+</script>
+{% endblock %}

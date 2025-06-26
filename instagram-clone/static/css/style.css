@@ -1,0 +1,103 @@
+/* body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+.navbar-brand {
+    font-weight: bold;
+    font-size: 1.4rem;
+}
+
+.card {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.card img {
+    object-fit: cover;
+    max-height: 400px;
+    width: 100%;
+}
+
+.card-body {
+    padding: 1rem;
+}
+
+#upload-status {
+    font-weight: bold;
+    color: #155724;
+}
+
+textarea {
+    resize: none;
+} */
+
+
+body {
+    background-color: #f8f9fa;
+    font-family: 'Segoe UI', sans-serif;
+  }
+  
+  .navbar {
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  }
+  
+  .card {
+    transition: box-shadow 0.2s ease-in-out;
+  }
+  
+  .card:hover {
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  .card-img-top {
+    object-fit: cover;
+    max-height: 400px;
+  }
+  
+  .comment {
+    font-size: 0.9rem;
+    color: #555;
+  }
+  
+  #post-list {
+    margin-bottom: 3rem;
+  }
+  
+  #upload-status {
+    font-weight: bold;
+  }
+  
+  #modal-body-content {
+    padding: 10px 15px;
+    font-size: 1rem;
+  }
+  
+  #modal-body-content img {
+    border-radius: 10px;
+    max-height: 400px;
+    object-fit: cover;
+    width: 100%;
+  }
+  
+  #like-btn {
+    border-radius: 20px;
+    font-size: 1rem;
+  }
+  
+  .comment {
+    margin-bottom: 6px;
+  }
+  
+  .show-more-btn {
+    font-weight: 500;
+    color: #0d6efd;
+    padding-left: 0;
+  }
+  
+  form textarea {
+    resize: vertical;
+  }
+  #upload-status {
+    font-style: italic;
+  }
+  
